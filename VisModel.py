@@ -90,9 +90,11 @@ def draw_path_on(img, speed_ms, angle_steers, color=(0,0,255)):
 
 # ***** main loop *****
 if __name__ == "__main__":
+    import sys
+    fname = sys.argv[1]
     #fname = '2016-01-31--19-19-25.h5'
     #fname = '2016-01-30--11-24-51.h5'
-    fname = '2016-03-29--10-50-20.h5'
+    #fname = '2016-03-29--10-50-20.h5'
     dataname = '../datasets/Modified-%s' %(fname)
     data = h5py.File(dataname,'r')
     #data = h5py.File('../datasets/Modified-2016-04-21--14-48-08.h5','r')
@@ -129,4 +131,4 @@ if __name__ == "__main__":
         #pygame.image.save(camera_surface_2x, '%d.jpg'%(i/100))
         pygame.display.flip()
         #break
-            
+
