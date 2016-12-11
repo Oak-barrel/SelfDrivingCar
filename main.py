@@ -14,20 +14,18 @@ import numpy as np
 
 start = time.time()
 params = {}
+#params['lr'] = 0.01
+#params['lr'] = 0.001
 params['lr'] = 0.01
-params['architecture'] = 'CommaAi' #draw, dave or
+#params['lr'] = 0.01
+#params['lr'] = 0.1
 
+#params['architecture'] = 'dave2' #draw, dave2 or commaAi or TestArchitecture
+params['architecture'] = 'commaAi'
+#params['architecture'] = TestArchitecture
+#params['architecture'] = 'draw'
 
-train_fnames =  """2016-01-30--11-24-51.h5
-2016-01-30--13-46-00.h5
-2016-01-31--19-19-25.h5
-2016-02-02--10-16-58.h5
-2016-02-08--14-56-28.h5
-2016-03-29--10-50-20.h5
-2016-04-21--14-48-08.h5
-2016-05-12--22-20-00.h5
-""".split('\n')
-
+train_fnames = ['train.h5']
 
 def loadData(fname):
     #prefixed with modified
@@ -36,8 +34,8 @@ def loadData(fname):
     print 'Number of samples %d' %Data['X'].shape[0]
     return Data['X'], Data['steering_angle']
 
-xval, yval = loadData('2016-06-02--21-39-29.h5')
-xtest, ytest = loadData('2016-02-11--21-32-47.h5')
+xval, yval = loadData('2016-05-12--22-20-00.h5')
+xtest, ytest = loadData('2016-06-08--11-46-01.h5')
 
 print 'Minus One Baseline (Val/Test): %.3f %.3f' %(np.mean((yval[:]+1)**2), np.mean((ytest[:]+1)**2))
 
@@ -48,16 +46,14 @@ elif params['architecture'].lower() == 'attention':
     network = Architecture.DRAW(80,40,3)
 elif params['architecture'].lower() == 'commaai':
     network = Architecture.CommaAi(80,40,3)
+elif params['architecture'].lower() == 'dave2':
+    network = Architecture.Dave2(80,40,3)
 else:
     raise unimplementedError
-
 
 print 'Time to Compile %.3fs' %(time.time()-start)
 
 network = regression(network, optimizer='adam', learning_rate= params['lr'],loss=Loss.RMSE, metric=Loss.BinnedAccuracy)
-
-#G = Generate('../datasets/resized-2016-04-21--14-48-08.h5', '../datasets/log-2016-04-21--14-48-08.h5', epoch=20, batchSize=128)
-
 
 model = tflearn.DNN(network,  best_checkpoint_path = 'checkpoint/%s' %params['architecture'], tensorboard_verbose=0, max_checkpoints=3, best_val_accuracy=0.20)
 
@@ -68,18 +64,21 @@ if os.path.isfile('checkpoint/%s.tflearn' %params['architecture']):
 else:
     print 'Training from Scratch'
 
-start = time.time()
-#Run for 6 epochs on the DataSet
-rounds = 5
-for _ in xrange(rounds):
-    for fname in train_fnames[:-1]:
+
+
+lrList = [0.01, 0.003, 0.0001]
+for lr in lrList:
+    params['lr'] = lr
+    start = time.time()
+    for fname in train_fnames:
         xtrain, ytrain = loadData(fname)
-        model.fit(xtrain, ytrain, batch_size=512,validation_set=(xval, yval), show_metric=True, n_epoch=1, run_id='%s' %params['architecture'], snapshot_epoch=True, shuffle=True)
+        model.fit(xtrain, ytrain, batch_size=512,validation_set=(xval, yval), show_metric=True, n_epoch=15, run_id='%s_%.3f' %(params['architecture'], params['lr']), snapshot_epoch=True, shuffle=True)
         print zip(model.predict(xtest[:10]), ytest[:10])
 
-    model.save('checkpoint/%s.tflearn' %params['architecture'])
+        model.save('checkpoint/%s.%.3f.tflearn' %(params['architecture'], params['lr']))
+    #    model.save('checkpoint/%s.tflearn' %(params['architecture']))
 
-print('Time taken %.3f' %(time.time()-start))
-print 'MSE: %.3f' %(np.mean((model.predict(xtest[:500])-ytest[:500])**2))
-print 'Minus One Baseline (Val/Test): %.3f %.3f' %(np.mean((yval[:]+1)**2), np.mean((ytest[:]+1)**2))
+    print('Time taken %.3f' %(time.time()-start))
+    #print 'MSE: %.3f' %(model.evaluate(xtest, ytest, 1024))
+    print 'Minus One Baseline (Val/Test): %.3f %.3f' %(np.mean((yval[:]+1)**2), np.mean((ytest[:]+1)**2))
 

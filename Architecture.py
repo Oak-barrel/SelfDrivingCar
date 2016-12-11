@@ -51,35 +51,35 @@ def Dave2(height, width, channel):
     # Building convolutional network
     network = input_data(shape=[None, height, width, channel])
     network = batch_normalization(network)
-    network = conv_2d(network, 24 , 5, name='Conv1')
+    network = conv_2d(network, 24 , 5, name='Conv1', regularizer='L2')
     #network = max_pool_2d(network, 2)
     #network = local_response_normalization(network)
-    network = conv_2d(network, 36, 5,  name='Conv2')
+    network = conv_2d(network, 36, 5,  name='Conv2', regularizer='L2')
     #network = max_pool_2d(network, 2)
     #network = local_response_normalization(network)
-    network = conv_2d(network, 48 , 5, name='Conv3')
+    network = conv_2d(network, 48 , 5, name='Conv3', regularizer='L2')
     #network = max_pool_2d(network, 2)
     #network = local_response_normalization(network)
-    network = conv_2d(network, 64, 5,  name='Conv4')
+    network = conv_2d(network, 64, 5,  name='Conv4', regularizer='L2')
     #network = max_pool_2d(network, 2)
     #network = local_response_normalization(network)
-    network = conv_2d(network, 64, 5, name='Conv5')
+    network = conv_2d(network, 64, 5, name='Conv5', regularizer='L2')
     #network = max_pool_2d(network, 2)
   # network = local_response_normalization(network)
     network = flatten(network)
     #network = dropout(network, 0.5)
+    #network = dropout(network, 0.8)
     #network = dropout(network, 0.5)
-    network = fully_connected(network, 1164, activation='relu')
-    network = fully_connected(network, 100, activation='relu')
-    network = fully_connected(network, 50, activation='relu')
-    network = fully_connected(network, 10, activation='relu')
+    network = fully_connected(network, 1164, activation='relu', regularizer='L2')
+    network = fully_connected(network, 100, activation='relu', regularizer='L2')
+    network = fully_connected(network, 50, activation='relu', regularizer='L2')
+    network = fully_connected(network, 10, activation='relu', regularizer='L2')
     #network = dropout(network, 0.8)
-    #network = dropout(network, 0.8)
-    network = fully_connected(network, 1)
+    network = fully_connected(network, 1, activation='linear', regularizer='L2')
 
     return network
 
-def CommaAi(height=28, width=28, channel=1):
+def CommaAi(height=28, width=28, channel=1, keep = [0.9, 0.6]):
     """
     Comma.Ai s convNet : with Normalization
     """
@@ -87,6 +87,7 @@ def CommaAi(height=28, width=28, channel=1):
     subsample = [4,2,2]
     # Building convolutional network
     network = input_data(shape=[None, height, width, channel])
+    network = dropout(network, keep.pop(0))
     network = batch_normalization(network)
     network = conv_2d(network, 16 ,windowsize.pop(0), activation='elu',regularizer="L2", name='Conv1')
     network = max_pool_2d(network, subsample.pop(0))
@@ -97,19 +98,32 @@ def CommaAi(height=28, width=28, channel=1):
     network = conv_2d(network, 64 , windowsize.pop(0), activation='elu', regularizer="L2", name='Conv3')
     network = max_pool_2d(network, subsample.pop(0))
     network = local_response_normalization(network)
-    network = dropout(network, 0.2)
+    network = dropout(network, keep.pop(0))
     network = fully_connected(network, 512, activation='elu', regularizer='L2')
-    network = dropout(network, 0.5)
     network = fully_connected(network, 1, activation='linear', regularizer='L2')
     return network
 
 
 
 
-def DRAW():
+def DRAW(height=28, width=28, channel=3):
     """ Recurrent models of attention
 
     """
+    def generate(network, height=28, width=28, channel=3):
+        """ Pass through conv nets:
+        """
+        windowsize = [5,5]
+        subsample = [2,2]
+        # Building convolutional network
+        network = batch_normalization(network)
+        network = conv_2d(network, 128 , windowsize.pop(0), activation='elu',regularizer="L2", name='Conv1')
+        network = max_pool_2d(network, 2)
+        network = conv_2d(network, 64, windowsize.pop(0), activation='elu', regularizer="L2", name='Conv2')
+        network = local_response_normalization(network)
+        network = flatten(network)
+        return network
+
 
     x = input_data(shape=[None, height, width, channel])
 
@@ -130,7 +144,7 @@ def DRAW():
         return Fx,Fy
 
     def attn_window(scope,h_dec,N):
-#        with tf.variable_scope(scope,reuse=DO_SHARE):
+#       with tf.variable_scope(scope,reuse=DO_SHARE):
         params = fully_connected(h_dec,5, reuse=True, name=scope)
         gx_,gy_,log_sigma2,log_delta,log_gamma=tf.split(1,5,params)
         gx=(A+1)/2*(gx_+1)
@@ -148,26 +162,21 @@ def DRAW():
              glimpse=tf.reshape(glimpse,[-1,N*N])
              return glimpse*tf.reshape(gamma,[-1,1])
         x=filter_img(x,Fx,Fy,gamma,read_n) # batch x (read_n*read_n)
-        #x_hat=filter_img(x_hat,Fx,Fy,gamma,read_n)
-        return tf.concat(1,[x,x_hat]) # concat along feature axix:
+        return x
 
     ## ENCODE ##
     def encode(state,input):
         #Conv-Layers, other network
         #with tf.variable_scope("encoder",reuse=DO_SHARE):
-        return lstm_enc(input,state)
+        return lstm_enc('encoder', input,state)
 
 
-    def generate(input, h_prev):
-        """ ConvNet based representation """
 
-
-        return
     # construct the unrolled computational graph
     # Query = tf.
     initial_representation = generate(x,tf.zeros(512,height*width*3) )
     for t in range(T):
-        c_prev = initial_representation if t==0 else cs[t-1]
+        #c_prev = initial_representation if t==0 else c_prev
         #x_hat = x - tf.sigmoid(c_prev) # error image
         #r = read(x,x_hat,h_dec_prev)
         r = read(x, h_prev)
