@@ -103,6 +103,8 @@ if __name__ == "__main__":
     #log = h5py.File("../datasets/log-2016-04-21--14-48-08.h5","r")
     #log = h5py.File('../datasets/log-2016-02-08--14-56-28.h5','r')
     clock = pygame.time.Clock()
+    #model.load('backUpModels/draw.tflearn')
+    import numpy as np
 
     milliseconds = clock.tick(20)
     #print log.keys()
@@ -115,7 +117,7 @@ if __name__ == "__main__":
         print imgsmall.shape
         img = (misc.imresize(imgsmall, (160,320,3))).astype(np.float32)
         #predicted_steers = model.predict(img[None, :, :, :].transpose(0, 3, 1, 2))[0][0]
-        predicted_steers = 0.0
+        #predicted_steers = angle_steers-3.45
 
         angle_steers = data['steering_angle'][i]
         speed_ms = data['speed'][i]
@@ -128,7 +130,7 @@ if __name__ == "__main__":
         screen.blit(camera_surface_2x, (0,0))
         text = "FPS: {0:.2f}   Playtime: {1:.2f}".format(clock.get_fps(), i/100)
         pygame.display.set_caption(text)
-        #pygame.image.save(camera_surface_2x, '%d.jpg'%(i/100))
+        pygame.image.save(camera_surface_2x, '%d.jpg'%(i/100))
         pygame.display.flip()
-        #break
+        break
 

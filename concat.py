@@ -13,6 +13,7 @@ fnames = """2016-01-30--11-24-51.h5
 2016-02-02--10-16-58.h5
 2016-02-08--14-56-28.h5
 2016-02-11--21-32-47.h5
+2016-05-12--22-20-00.h5
 2016-03-29--10-50-20.h5""".split('\n')
 
 
@@ -21,12 +22,14 @@ def LoadData(fname):
     F = h5py.File('datasets/Modified-%s' %fname,'r')
     return F
 
-#csum = sum([lambda x: LoadData(x)['X'].shape[0] , fnames])
 csum = [ LoadData(each)['X'].shape[0] for each in fnames]
 print csum
 csum = sum(csum)
 
 
+batchSize = 1024
+rem = batchSize - csum%batchSize
+csum += rem #batchsize divisible by 1024
 
 
 def run(files, csum):
@@ -44,10 +47,13 @@ def run(files, csum):
             h5f['X'][prev_sum:prev_sum+data['X'].shape[0]] = data['X']
             h5f['steering_angle'][prev_sum:prev_sum+data['steering_angle'].shape[0]] = data['steering_angle']
             h5f['speed'][prev_sum:prev_sum+ data['speed'].shape[0]] = data['speed']
-
-
-
             prev_sum += data['X'].shape[0]
+
+        data = LoadData(files[-3])
+        h5f['X'][prev_sum:prev_sum+data['X'].shape[0]] = data['X'][:rem]
+        h5f['steering_angle'][prev_sum:prev_sum+data['steering_angle'].shape[0]] = data['steering_angle'][:rem]
+        h5f['speed'][prev_sum:prev_sum+ data['speed'].shape[0]] = data['speed'][:rem]
         h5f.flush()
+
 
 run(fnames, csum)
